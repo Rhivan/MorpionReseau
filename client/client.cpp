@@ -1,8 +1,6 @@
 #include "client.h"
 #include <iostream>
 #include <windows.h>
-#include "framework.h"
-#include "Resource.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -69,7 +67,7 @@ void Client::createMessage(std::string user, std::string player, int x, int y) {
 
 void Client::run() {
     connect();
-    createMessage("Guilherme", "X", 1, 1);
+    createMessage("Guilherme", "O", 1, 1);
 
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
@@ -78,8 +76,4 @@ void Client::run() {
     }
 }
 
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    Client client("127.0.0.1", 8080);
-    client.run();
-    return 0;
-}
+
