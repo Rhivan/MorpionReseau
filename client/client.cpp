@@ -1,79 +1,267 @@
-#include "client.h"
+// client.cpp : Définit le point d'entrée de l'application.
+//
 #include <iostream>
+#include <winsock2.h>
 #include <windows.h>
+
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
-Client::Client(const char* serverIp, int port) : SERVER_IP(serverIp), PORT(port) {
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "Erreur lors de l'initialisation de Winsock." << std::endl;
-        exit(EXIT_FAILURE);
-    }
+#include "framework.h"
+#include "Resource.h"
 
-    clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (clientSocket == INVALID_SOCKET) {
-        std::cerr << "Erreur lors de la création du socket." << std::endl;
-        WSACleanup();
-        exit(EXIT_FAILURE);
-    }
+const char* SERVER_IP = "127.0.0.1";
+const int PORT = 8080;
+const int BUFFER_SIZE = 4;
+
+#define MAX_LOADSTRING 100
+
+// Variables globales :
+HINSTANCE hInst;                                // instance actuelle
+WCHAR szTitle[MAX_LOADSTRING];                  // Texte de la barre de titre
+WCHAR szWindowClass[MAX_LOADSTRING];           // nom de la classe de fenêtre principale
+SOCKET clientSocket;
+
+// Déclarations anticipées des fonctions incluses dans ce module de code :
+ATOM                MyRegisterClass(HINSTANCE hInstance);
+BOOL                InitInstance(HINSTANCE, int);
+LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
+void createMessage(std::string user, std::string player, int x, int y, SOCKET& socket)
+{
+	rapidjson::Document message;
+
+	message.SetObject();
+
+	rapidjson::Value Username;
+	Username.SetString(user.c_str(), message.GetAllocator());
+	message.AddMember("Username", Username, message.GetAllocator());
+
+	rapidjson::Value PlayerToken;
+	PlayerToken.SetString(player.c_str(), message.GetAllocator());
+	message.AddMember("PlayerToken", PlayerToken, message.GetAllocator());
+
+	rapidjson::Value X;
+	X.SetInt(x);
+	message.AddMember("x", X, message.GetAllocator());
+
+	rapidjson::Value Y;
+	Y.SetInt(y);
+	message.AddMember("y", Y, message.GetAllocator());
+
+	//Permet de stocker le message en type json
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	message.Accept(writer);
+
+	// Convertit le JSON en chaîne de caractères
+	send(socket, buffer.GetString(), buffer.GetLength(), 0);
 }
 
-Client::~Client() {
-    closesocket(clientSocket);
-    WSACleanup();
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPWSTR    lpCmdLine,
+	_In_ int       nCmdShow)
+{
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	UNREFERENCED_PARAMETER(lpCmdLine);
+
+	// TODO: Placez le code ici.
+
+	// Initialise les chaînes globales
+	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+	LoadStringW(hInstance, IDC_CLIENT, szWindowClass, MAX_LOADSTRING);
+	MyRegisterClass(hInstance);
+
+	// Effectue l'initialisation de l'application :
+	if (!InitInstance(hInstance, nCmdShow))
+	{
+		return FALSE;
+	}
+
+	WSADATA wsaData;
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+		std::cerr << "Erreur lors de l'initialisation de Winsock." << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+	if (clientSocket == INVALID_SOCKET) {
+		std::cerr << "Erreur lors de la création du socket." << std::endl;
+		WSACleanup();
+		return EXIT_FAILURE;
+	}
+
+	sockaddr_in serverAddress;
+	serverAddress.sin_family = AF_INET;
+	serverAddress.sin_addr.s_addr = inet_addr(SERVER_IP);
+	serverAddress.sin_port = htons(PORT);
+
+	if (connect(clientSocket, reinterpret_cast<struct sockaddr*>(&serverAddress), sizeof(serverAddress)) == SOCKET_ERROR)
+	{
+		//error login
+		closesocket(clientSocket);
+		WSACleanup();
+		return EXIT_FAILURE;
+	}
+
+	//login acceptation
+	createMessage("Guilherme", "X", 1, 1, clientSocket);
+
+	//closesocket(clientSocket);
+
+	/*return EXIT_SUCCESS;*/
+
+	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_CLIENT));
+
+	MSG msg;
+
+	// Boucle de messages principale :
+	while (GetMessage(&msg, nullptr, 0, 0))
+	{
+		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
+
+	WSACleanup();
+
+	return (int)msg.wParam;
 }
 
-void Client::connect() {
-    sockaddr_in serverAddress;
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_addr.s_addr = inet_addr(SERVER_IP);
-    serverAddress.sin_port = htons(PORT);
+//
+//  FONCTION : MyRegisterClass()
+//
+//  OBJECTIF : Inscrit la classe de fenêtre.
+//
+ATOM MyRegisterClass(HINSTANCE hInstance)
+{
+	WNDCLASSEXW wcex;
 
-    if (::connect(clientSocket, reinterpret_cast<struct sockaddr*>(&serverAddress), sizeof(serverAddress)) == SOCKET_ERROR) {
-        std::cerr << "Erreur lors de la connexion au serveur." << std::endl;
-        closesocket(clientSocket);
-        WSACleanup();
-        exit(EXIT_FAILURE);
-    }
+	wcex.cbSize = sizeof(WNDCLASSEX);
+
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CLIENT));
+	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_CLIENT);
+	wcex.lpszClassName = szWindowClass;
+	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+
+	return RegisterClassExW(&wcex);
 }
 
-void Client::createMessage(std::string user, std::string player, int x, int y) {
-    rapidjson::Document message;
-    message.SetObject();
+//
+//   FONCTION : InitInstance(HINSTANCE, int)
+//
+//   OBJECTIF : enregistre le handle d'instance et crée une fenêtre principale
+//
+//   COMMENTAIRES :
+//
+//        Dans cette fonction, nous enregistrons le handle de l'instance dans une variable globale, puis
+//        nous créons et affichons la fenêtre principale du programme.
+//
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+{
+	hInst = hInstance; // Stocke le handle d'instance dans la variable globale
 
-    rapidjson::Value Username;
-    Username.SetString(user.c_str(), message.GetAllocator());
-    message.AddMember("Username", Username, message.GetAllocator());
+	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
-    rapidjson::Value PlayerToken;
-    PlayerToken.SetString(player.c_str(), message.GetAllocator());
-    message.AddMember("PlayerToken", PlayerToken, message.GetAllocator());
+	if (!hWnd)
+	{
+		return FALSE;
+	}
 
-    rapidjson::Value X;
-    X.SetInt(x);
-    message.AddMember("x", X, message.GetAllocator());
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
 
-    rapidjson::Value Y;
-    Y.SetInt(y);
-    message.AddMember("y", Y, message.GetAllocator());
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    message.Accept(writer);
-
-    send(clientSocket, buffer.GetString(), buffer.GetLength(), 0);
+	return TRUE;
 }
 
-void Client::run() {
-    connect();
-    createMessage("Guilherme", "O", 1, 1);
+//
+//  FONCTION : WndProc(HWND, UINT, WPARAM, LPARAM)
+//
+//  OBJECTIF : Traite les messages pour la fenêtre principale.
+//
+//  WM_COMMAND  - traite le menu de l'application
+//  WM_PAINT    - Dessine la fenêtre principale
+//  WM_DESTROY  - génère un message d'arrêt et retourne
+//
+//
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_COMMAND:
+	{
+		int wmId = LOWORD(wParam);
+		// Analyse les sélections de menu :
+		switch (wmId)
+		{
+		case IDM_ABOUT:
+			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+			break;
+		case IDM_EXIT:
+			DestroyWindow(hWnd);
+			break;
+		default:
+			return DefWindowProc(hWnd, message, wParam, lParam);
+		}
+	}
+	break;
+	case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hWnd, &ps);
+		// TODO: Ajoutez ici le code de dessin qui utilise hdc...
+		TextOut(hdc, 10, 10, L"Hello, Windows!", 15);
 
-    MSG msg;
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
+
+		EndPaint(hWnd, &ps);
+	}
+	break;
+	case WM_CLOSE:
+		closesocket(clientSocket);
+		WSACleanup();
+		DestroyWindow(hWnd);
+		break;
+
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	return 0;
 }
 
+// Gestionnaire de messages pour la boîte de dialogue À propos de.
+INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		return (INT_PTR)TRUE;
 
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}

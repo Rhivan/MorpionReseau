@@ -1,5 +1,4 @@
-#ifndef SERVER_H
-#define SERVER_H
+#pragma once
 
 #include <iostream>
 #include <winsock2.h>
@@ -13,6 +12,8 @@ public:
     ~Server();
     void Start();
     void Stop();
+    void HandleClient(SOCKET clientSocket);
+    static DWORD WINAPI ClientThread(LPVOID lpParam);
 
 private:
     static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -23,5 +24,3 @@ private:
     static const UINT WM_Conex = WM_USER + 1;
     static const UINT WM_msg = WM_USER + 2;
 };
-
-#endif // SERVER_H

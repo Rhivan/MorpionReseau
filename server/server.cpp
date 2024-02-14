@@ -78,6 +78,29 @@ void Server::Stop() {
     WSACleanup();
 }
 
+
+void Server::HandleClient(SOCKET clientSocket) {
+    char buffer[BUFFER_SIZE];
+    int count;
+
+    while ((count = recv(clientSocket, buffer, sizeof(buffer), 0)) > 0) {
+        // Process received data...
+        buffer[count] = '\0';
+        std::cout << "Message from client: " << buffer << std::endl;
+    }
+
+    // Close the client socket...
+    closesocket(clientSocket);
+}
+
+DWORD WINAPI Server::ClientThread(LPVOID lpParam) {
+    Server* server = reinterpret_cast<Server*>(lpParam);
+    SOCKET clientSocket = reinterpret_cast<SOCKET>(lpParam);
+    server->HandleClient(clientSocket);
+
+    return 0;
+}
+
 LRESULT CALLBACK Server::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
     case WM_Conex:
@@ -86,7 +109,17 @@ LRESULT CALLBACK Server::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
             SOCKET clientSocket = accept(wParam, nullptr, nullptr);
             WSAAsyncSelect(clientSocket, hWnd, WM_msg, FD_READ | FD_CLOSE);
             std::cout << "Connexion Accepted: " << wParam << std::endl;
-            break;
+            
+
+            HANDLE threadHandle = CreateThread(nullptr, 0, &Server::ClientThread, reinterpret_cast<LPVOID>(clientSocket), 0, nullptr);
+            if (threadHandle == NULL) {
+                std::cerr << "Error creating client thread." << std::endl;
+                closesocket(clientSocket);
+            }
+            else {
+                std::cout << "Client thread created." << std::endl;
+            }
+            break; 
         }
         break;
 
