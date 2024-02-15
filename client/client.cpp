@@ -13,6 +13,7 @@
 #include "framework.h"
 #include "Resource.h"
 
+
 const char* SERVER_IP = "127.0.0.1";
 const int PORT = 8080;
 const int BUFFER_SIZE = 4;
@@ -83,17 +84,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
+	
+
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
 		std::cerr << "Erreur lors de l'initialisation de Winsock." << std::endl;
-		return EXIT_FAILURE;
+		//return EXIT_FAILURE;
 	}
 
 	SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (clientSocket == INVALID_SOCKET) {
 		std::cerr << "Erreur lors de la création du socket." << std::endl;
 		WSACleanup();
-		return EXIT_FAILURE;
+		//return EXIT_FAILURE;
 	}
 
 	sockaddr_in serverAddress;
@@ -106,11 +109,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		//error login
 		closesocket(clientSocket);
 		WSACleanup();
-		return EXIT_FAILURE;
+		//return EXIT_FAILURE;
 	}
 
 	//login acceptation
 	createMessage("Guilherme", "X", 1, 1, clientSocket);
+	//send (clientSocket, "Guilherme", 9, 0);
 
 	//closesocket(clientSocket);
 
@@ -129,6 +133,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			DispatchMessage(&msg);
 		}
 	}
+
 
 	WSACleanup();
 
@@ -178,6 +183,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
+
 	if (!hWnd)
 	{
 		return FALSE;
@@ -226,11 +232,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HDC hdc = BeginPaint(hWnd, &ps);
 		// TODO: Ajoutez ici le code de dessin qui utilise hdc...
 		TextOut(hdc, 10, 10, L"Hello, Windows!", 15);
+		
+
 
 
 		EndPaint(hWnd, &ps);
 	}
 	break;
+
+	
+
 	case WM_CLOSE:
 		closesocket(clientSocket);
 		WSACleanup();
