@@ -65,9 +65,11 @@ void Client::createMessage(std::string user, std::string player, int x, int y) {
     send(clientSocket, buffer.GetString(), buffer.GetLength(), 0);
 }
 
+<<<<<<< Updated upstream
 void Client::run() {
     connect();
     createMessage("Guilherme", "O", 1, 1);
+=======
 //
 //  FONCTION : WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -106,6 +108,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		
 		TextOut(hdc, 10, 10, L"Hello, Windows!", 15);
 		
+>>>>>>> Stashed changes
 
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
