@@ -68,6 +68,44 @@ void Client::createMessage(std::string user, std::string player, int x, int y) {
 void Client::run() {
     connect();
     createMessage("Guilherme", "O", 1, 1);
+//
+//  FONCTION : WndProc(HWND, UINT, WPARAM, LPARAM)
+//
+//  OBJECTIF : Traite les messages pour la fenêtre principale.
+//
+//  WM_COMMAND  - traite le menu de l'application
+//  WM_PAINT    - Dessine la fenêtre principale
+//  WM_DESTROY  - génère un message d'arrêt et retourne
+//
+//
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_COMMAND:
+	{
+		int wmId = LOWORD(wParam);
+		// Analyse les sélections de menu :
+		switch (wmId)
+		{
+		case IDM_ABOUT:
+			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+			break;
+		case IDM_EXIT:
+			DestroyWindow(hWnd);
+			break;
+		default:
+			return DefWindowProc(hWnd, message, wParam, lParam);
+		}
+	}
+	break;
+	case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hWnd, &ps);
+		
+		TextOut(hdc, 10, 10, L"Hello, Windows!", 15);
+		
 
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
